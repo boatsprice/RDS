@@ -1,0 +1,111 @@
+#Corrected syntax appended rds
+#Revision 3
+#22FEB26
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "VPC spanning 3 AZs with Name tag format VPC-studentID (deploy in us-west-2)."
+
+Parameters:
+  StudentID:
+    Type: String
+    Default: "chrpri8997"
+    Description: "ECPI student ID used to name the VPC (format: VPC-studentID)"
+
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR block for the VPC"
+
+  Subnet1Cidr:
+    Type: String
+    Default: "10.0.1.0/24"
+    Description: "CIDR block for Subnet 1 (AZ index 0)"
+
+  Subnet2Cidr:
+    Type: String
+    Default: "10.0.2.0/24"
+    Description: "CIDR block for Subnet 2 (AZ index 1)"
+
+  Subnet3Cidr:
+    Type: String
+    Default: "10.0.3.0/24"
+    Description: "CIDR block for Subnet 3 (AZ index 2)"
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "VPC-${StudentID}"
+
+  RdsInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      VPCSecurityGroups:
+        - <SECURITY-GROUP-ID>
+      AllocatedStorage: '5'
+      DBInstanceClass: db.t3.micro
+      DBInstanceIdentifier: playground-db
+      Engine: MySQL
+      MasterUsername: Admin
+      MasterUserPassword: CloudAcademy123!
+
+  SubnetAz1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet1Cidr
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ""
+      Tags:
+        - Key: Name
+          Value: !Sub "Subnet-AZ1-${StudentID}"
+
+  SubnetAz2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet2Cidr
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ""
+      Tags:
+        - Key: Name
+          Value: !Sub "Subnet-AZ2-${StudentID}"
+
+  SubnetAz3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet3Cidr
+      AvailabilityZone: !Select
+        - 2
+        - !GetAZs ""
+      Tags:
+        - Key: Name
+          Value: !Sub "Subnet-AZ3-${StudentID}"
+
+Outputs:
+  VpcId:
+    Description: "VPC ID"
+    Value: !Ref VPC
+
+  VpcName:
+    Description: "VPC Name tag value (format VPC-studentID)"
+    Value: !Sub "VPC-${StudentID}"
+
+  SubnetIds:
+    Description: "Comma-delimited list of the 3 subnet IDs (one per AZ)"
+    Value: !Join
+      - ","
+      - - !Ref SubnetAz1
+        - !Ref SubnetAz2
+        - !Ref SubnetAz3
+
